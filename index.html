@@ -58,8 +58,8 @@
       an attempt to help with these weaknesses.</p>
         
       <h3>The Git Stuff</h3>
-      <p>These recipes use a simple Grails application hosted on Git as a testbed for the queries. The application defines two
-      domain classes and populates them with sample data to query agains. The two domain classes are in the files <code>Artist.groovy</code>
+      <p>These recipes use a simple Grails application hosted on GitHub as a testbed for the queries. The application defines two
+      domain classes and populates them with sample data to query against. The two domain classes are in the files <code>Artist.groovy</code>
       and <code>Work.groovy</code>.
       </p>
         <img src="images/diagram.png" alt="Project Classes"/>
@@ -244,7 +244,7 @@ println artist
         <li><strong>sort</strong> : the name of the domain class property to sort on (String)</li>
         <li><strong>order</strong> : the sort order, either <code>asc</code> or <code>desc</code> (String)</li>
         <li><strong>max</strong> : the maximum number of rows to return in the query (Integer)</li>
-        <li><strong>offset</strong> : the number of rows to skip before returning the result (Integer)</li>
+        <li><strong>offset</strong> : the number of rows to skip over before starting to return the result (Integer)</li>
         </ul>
         </p>
         </div>
@@ -342,7 +342,7 @@ println results
                 <h3>How many Works are there for each Style (GROUP BY)</h3>
 
                 <p>This is a classic <strong>group by</strong> scenario in SQL. As you can see below,
-                   the GORM syntax gets downright convluted, while the HQL syntax stays clean. The
+                   the GORM syntax gets downright convoluted, while the HQL syntax stays clean. The
                    complexity comes from needing to use a property of the Artist domain class while querying against
                    a Work.
                 </p>
@@ -458,7 +458,7 @@ println results
             <div class="span12 offset2">
                 <h3>Find all the Artists with 5 or more Work</h3>
 
-                <p>This query gets a list of all the Arist who have five or more Works. This one also
+                <p>This query gets a list of all the Artist who have five or more Works. This one also
                 specifies a sort by the Artist name.</p>
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
@@ -540,7 +540,7 @@ println results
         <div class="span12 offset2">
             <h3>Find the most expensive Work for a Style</h3>
 
-            <p>Queries the Work, but must join to the Arist to get the style.
+            <p>Queries the Work, but must join to the Artist to get the style.
             </p>
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
@@ -661,7 +661,7 @@ println results
             wildcard.</p>
             <p>For the HQL version, there isn't a way of specifying a case-insensitive search with the
             executeQuery syntax, so I'm using the <code>lower()</code> function in HQL to convert both
-            the criteria and the column value to lowercase for the comparision.</p>
+            the criteria and the column value to lowercase for the comparison.</p>
         </div>
     </div>
 
