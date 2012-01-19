@@ -1,6 +1,6 @@
 # GORM Recipes
 
-This is the sample project used for the [GORM Recipes](http://timsporcic.github.com/gorm-recipes) tutorial.
+This is the sample project used for the [GORM Recipes](http://timsporcic.github.com/GORM-Recipes) tutorial.
 
 It consists of a simple Grails project which has two domain classes: Artist and Work.
 There is a one-to-many relationship between the two entities.
