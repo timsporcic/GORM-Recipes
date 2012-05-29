@@ -17,7 +17,6 @@
     <div class="container">
       <a class="brand" href="#">GORM Recipes</a>
       <ul class="nav">
-        <!--<li class="active"><a href="#masthead">Top</a></li>-->
         <li class="active"><a href="#setup" >Setup</a></li>
         <li><a href="#basic-queries">Basic Queries</a></li>
         <li><a href="#advanced-queries">Advanced Queries</a></li>
@@ -31,10 +30,10 @@
 <header class="jumbotron masthead" id="masthead">
     <div class="inner">
         <div class="container">
-            <h1>GORM Recipes</h1>
+            <h1>Grails GORM Recipes</h1>
 
             <p class="lead">
-                Tastes like chicken, acts like SQL<br/>
+                Because you shouldn't be pulling your hair out<br/>
             </p>
         </div>
     </div>
@@ -49,6 +48,12 @@
   <div class="row">
     <div class="span12 offset2">
       <h3>Overview</h3>
+      <p><span class="label success">New</span> Based on some recent project work at my awesome employer,
+          <a href="http://www.credera.com" target="_blank">Credera</a>, I've spent a lot more time with GORM and
+      have updated these recipes from my lessons learned. One of the biggest changes from the prior version is the use
+      of <code>where</code> queries to simplify things. I've dropped the HQL queries from cases where the <code>where</code>
+      queries make more sense.</p>
+
       <p>GORM recipes demonstrates how to effectively use the GORM persistence provider in a Grails 2.0 application.
       GORM makes it exceptionally easy to do the simple things, but for a new user, you can quickly hit a wall when you want 
       to do something which would be simple to do in SQL. These recipes should help you get over that wall and help you resist
@@ -57,6 +62,8 @@
       branch and can probably answer your questions if you actually read it. The weakness is finding what you need or the right example of
       how a particular feature works. These recipes are an extension to the <a href="http://grails.org/doc/latest/guide/GORM.html#querying">Querying with GORM section</a> and are
       an attempt to help with these weaknesses.</p>
+
+
         
       <h3>The Git Stuff</h3>
       <p>These recipes use a simple Grails application hosted on GitHub as a testbed for the queries. The application defines two
@@ -126,30 +133,55 @@ println artist
                 <h3>Find an Artist by Name</h3>
 
                 <p>The syntax demonstrates both the <a href="http://grails.org/doc/latest/guide/GORM.html#finders">dynamic finders</a> in GORM as
-                    well as the corresponding HQL syntax. Each of these will only return a single instance
+                    well as the corresponding GORM <code>where</code> syntax. Each of these will only return a single instance
                     of the Artist, or null if the criteria doesn't match. If, for some reason, the query
                     returns multiple rows, only the first matching row is returned. This can lead to subtle
                     bugs. If your query can return multiple rows, use the findAll() syntax as shown in later recipe.
                 </p>
-                <p>
-                    The HQL version of the query makes use of named parameter substitution, which is the
-                    safest way to use parameters with HQL queries.
-                </p>
+
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def artist = Artist.findByName('Lucy Sparks')
+def criteria = 'Lucy Sparks'
+
+// GORM Dynamic Finder
+def artist = Artist.findByName(criteria)
 println artist
 
-// HQL
-artist = Artist.find('from Artist where name = :name',[name: 'Lucy Sparks'])
+// GORM Where
+def query = Artist.where {
+    name == criteria
+}
+
+artist = query.find()
+
 println artist
 
 </pre>
 <pre class="prettyprint-dark lang-java span10">
 (5: Lucy Sparks)
+(5: Lucy Sparks)
+</pre>
+            <p>Note that the <code>where</code> query is being executed in a two-step process. First, the query is
+            built using the <code>where</code> clause, then executed via the <code>find()</code> method. This can be
+            simplified to a single operation, as follows, but there are benefits to the two-step process which I'll
+            highlight below.</p>
+<pre class="prettyprint lang-java span10">
+import gorm.recipes.*
+new BootStrap().init()
+
+def criteria = 'Lucy Sparks'
+
+// GORM Where plus execute in one action
+def artist = Artist.find {
+    name == criteria
+}
+
+println artist
+
+</pre>
+<pre class="prettyprint-dark lang-java span10">
 (5: Lucy Sparks)
 </pre>
             </div>
@@ -165,23 +197,38 @@ println artist
                 the method name and builds the appropriate query. Full details on building dynamic finders
                 are in the <a href="http://grails.org/doc/latest/guide/GORM.html#finders">Grails documentation</a>.
             </p>
+            <p>The <code>where</code> query works the same as above. We just use the the additional criteria via
+            the boolean <code>&&</code> logic in the query. The <code>where</code> query syntax can to be used to
+            build very sophisticated queries which remain readable. Since we're using <code>find()</code> with the
+            query, only one row is returned.</p>
+            <p><span class="label important">Important</span> The <code>find()</code> query does not behave the
+            same as the dynamic finder in cases where more than one row might be returned by the query. If you use
+            the <code>find()</code> query with a criteria that would return more than one row, you will get an
+            exception, versus the dynamic finder, which will return the first row that matches.</p>
+
 
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def artist = Artist.findByHomeAndStyle('El Paso, TX','Classic')
+def homeCriteria = 'El Paso, TX'
+def styleCriteria = 'Classic'
+
+// GORM Dynamic Finder
+def artist = Artist.findByHomeAndStyle(homeCriteria,styleCriteria)
 println artist
 
-// HQL
-artist = Artist.find('from Artist where home = :home and style = :style',
-    [home: 'El Paso, TX', style: 'Classic'])
+// GORM Where
+def query = Artist.where {
+    home == homeCriteria && style == styleCriteria
+}
+
+artist = query.find()
 println artist
 </pre>
 <pre class="prettyprint-dark lang-java span10">
-(5: Lucy Sparks)
-(5: Lucy Sparks)
+(10: Lucy Peters)
+(10: Lucy Peters)
 </pre>
         </div>
     </div>
@@ -195,18 +242,25 @@ println artist
                 instance. The list will be empty if no results are found, otherwise it wll contain the
                 Artist instances that matched the criteria.
             </p>
+            <p>Note there is no guarantee on the order of the results since we didn't provide any sorting instructions</p>
 
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def artist = Artist.findAllByStyle('Modern')
-println artist
+def styleCriteria = 'Modern'
 
-// HQL
-artist = Artist.findAll('from Artist where style = :style',[style: 'Modern'])
-println artist
+// GORM Dynamic Finder
+def artistList = Artist.findAllByStyle(styleCriteria)
+println artistList
+
+// GORM Where
+def query = Artist.where {
+    style == styleCriteria
+}
+
+artistList = query.list()
+println artistList
 </pre>
 <pre class="prettyprint-dark lang-java span10">
 [(1: Bill Conner), (5: Lucy Sparks), (6: Richard Corsin), (9: Clint Fallow)]
@@ -220,27 +274,29 @@ println artist
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def artist = Artist.findAllByStyle('Modern',
-    [sort: 'name', max: 2, offset: 1, order: 'asc'])
-println artist
+def styleCriteria = 'Modern'
 
-// HQL
-artist = Artist.findAll('from Artist where style = :style order by name asc',
-    [style: 'Modern'],
-    [max: 2, offset: 1])
-println artist
+// GORM Dynamic Finder
+def artistList = Artist.findAllByStyle(styleCriteria, [sort: 'name', max: 2, offset: 1, order: 'asc'])
+println artistList
+
+// GORM Where
+def query = Artist.where {
+    style == styleCriteria
+}
+
+artistList = query.list(sort: 'name', max: 2, offset: 1, order: 'asc')
+println artistList
 </pre>
 <pre class="prettyprint-dark lang-java span10">
 [(9: Clint Fallow), (5: Lucy Sparks)]
 [(9: Clint Fallow), (5: Lucy Sparks)]
 </pre>
         <p>Note the subtle difference between the options map for the two styles of queries. With the
-        GORM style, the <code>sort</code> key contains the name of the domain class property to sort by. The HQL syntax
-        follows a more SQL-like convention where you need to add an <code>order by</code> clause to the end
-        of the query. The HQL query will ignore the <code>sort</code> and <code>order</code> keys in the
-        options map.</p>
-        <p>The valid values for the options map are:
+        GORM dynamic finder, the sort and pagination criteria are passed in a map as the final parameter
+        to the dynamic finder. The GORM <code>where</code> instead passes those values at the execution
+        of the query.</p>
+        <p>The valid values for the sort and pagination options are:
         <ul>
         <li><strong>sort</strong> : the name of the domain class property to sort on (String)</li>
         <li><strong>order</strong> : the sort order, either <code>asc</code> or <code>desc</code> (String)</li>
@@ -248,7 +304,28 @@ println artist
         <li><strong>offset</strong> : the number of rows to skip over before starting to return the result (Integer)</li>
         </ul>
         </p>
+
+
+        <p>The one-line version of the GORM <code>where</code> query would look like this. Note the use of <code>findAll()</code>
+         instead of <code>list()</code> to get the results.</p>
+<pre class="prettyprint lang-java span10">
+import gorm.recipes.*
+new BootStrap().init()
+
+def styleCriteria = 'Modern'
+
+// GORM Where
+def artistList = Artist.findAll(sort: 'name', max: 2, offset: 1, order: 'asc') {
+    style == styleCriteria
+}
+
+println artistList
+</pre>
+<pre class="prettyprint-dark lang-java span10">
+[(9: Clint Fallow), (5: Lucy Sparks)]
+</pre>
         </div>
+
     </div>
 
     <div class="row">
@@ -256,35 +333,32 @@ println artist
             <h3>Find the Count of all Artists with a specific Style</h3>
 
             <p>This query would be solved by using the <code>count</code> aggregate function in SQL. The
-               syntax for GORM and HQL are pretty similar.
+               syntax for GORM dynamic finder and GORM <code>where</code> query are pretty similar. For the latter,
+               we use the <code>count()</code> method of the query object.
             </p>
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def artist = Artist.countByStyle('Modern')
-println artist
+def styleCriteria = 'Modern'
 
-// HQL
-artist = Artist.executeQuery('select count(*) from Artist where style = :style',
-    [style: 'Modern'])
-println artist
+// GORM Dynamic Finder
+def artistCount = Artist.countByStyle('Modern')
+println artistCount
+
+// GORM Where
+def query = Artist.where {
+    style == styleCriteria
+}
+
+artistCount = query.count()
+println artistCount
 </pre>
 <pre class="prettyprint-dark lang-java span10">
 4
-[4]
+4
 </pre>
-            <p><span class="label warning">Notice</span> There is a huge difference in the output of these two
-                queries. In the GORM query, the result is a simple <code>Long</code> numeric value of the number of
-                matching rows, or zero if no rows match. For the HQL query, a call to executeQuery will always
-                return a <code>java.util.List</code> instance. In this case, the list will contain a single value,
-                which is the <code>Long</code> count of the number of matching rows. So for the HQL version, you need
-                to either index into the result or call the <code>first()</code> method on the list to get the numeric
-                value.
-            </p>
-            
-            
+
             </div>
         </div>
 
@@ -302,15 +376,17 @@ println artist
                 <h3>Find the Artist Styles (DISTINCT)</h3>
 
                 <p>In SQL, this would be getting the distinct values of the style column of the Artist table.
-                   It is still relatively simple in GORM, but can be convoluted.
+                   It is still relatively simple in GORM, but can be convoluted. This is a case where using
+                   HQL with GORM makes life simpler.
                 </p>
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def results = Artist.where {}.projections { distinct 'style' }
-println results.list()
+// GORM Where
+def query = Artist.where {}.projections { distinct 'style' }
+def results = query.list()
+println results
 
 // HQL
 results = Artist.executeQuery('select distinct style from Artist')
@@ -321,20 +397,15 @@ println results
 [Classic, Abstract, Modern]
 
 </pre>
-            <p>The GORM syntax is downright ugly. In this case, the <code>where</code> method is building
-               a detached query, and we're tacking a projection on to the end. This is enough to make a
+            <p>The GORM syntax is downright ugly. In this case, we're using an empty <code>where</code> query
+                and tacking a <a href="http://docs.jboss.org/hibernate/core/3.6/javadocs/org/hibernate/criterion/Projections.html">projection</a> on to the end. This is enough to make a
                SQL person pull their hair out and it was the least painful syntax I could find. If anyone
                has a cleaner example, I'll be happy to add it.
             </p>
-            <p>Note the GORM query doesn't directly return a <code>java.util.List</code>. The results variables
-            contains a instance of a <code>grails.gorm.DetachedCriteria</code> which gets executed when
-            we call the <code>list()</code> method, which returns the actual list we want.</p>
             <p>The HQL implementation looks much cleaner and closer to what a SQL person would expect. The
                result is the list of Strings which are the distinct styles for the artists.
             </p>
-                
-                
-                
+
             </div>
         </div>
 
@@ -343,9 +414,10 @@ println results
                 <h3>How many Works are there for each Style (GROUP BY)</h3>
 
                 <p>This is a classic <strong>group by</strong> scenario in SQL. As you can see below,
-                   the GORM syntax gets downright convoluted, while the HQL syntax stays clean. The
-                   complexity comes from needing to use a property of the Artist domain class while querying against
-                   a Work.
+                   with GORM we need to drop down to using the
+                    <a href="http://grails.org/doc/latest/ref/Domain%20Classes/createCriteria.html" target="_blank">Criteria Builder API</a>,
+                    while the HQL syntax stays clean. The complexity comes from needing to use a property of the
+                    Artist domain class while querying against a Work.
                 </p>
 
 
@@ -353,10 +425,10 @@ println results
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def c = Work.createCriteria()
+// GORM Criteria Builder
+def criteria = Work.createCriteria()
 
-def results = c.list {
+def results = criteria.list {
 
     createAlias('artist','artistAlias')
 
@@ -393,10 +465,10 @@ println results
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def c = Work.createCriteria()
+// GORM Criteria Builder
+def criteria = Work.createCriteria()
 
-def results = c.list {
+def results = criteria.list {
 
     createAlias('artist','artistAlias')
 
@@ -436,22 +508,32 @@ println results
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
+// get an artist
+def artistCriteria = Artist.get(1)
 
-def artist = Artist.get(1)
-println artist.works
+// GORM via entity association (hasMany)
+println artistCriteria.works
 
-// HQL
-def results = Work.executeQuery('select w from Work as w where w.artist = :artist', [artist: artist])
+// GORM Where
+def query = Work.where {
+    artist == artistCriteria
+}
+
+def results = query.list()
 println results
 </pre>
 <pre class="prettyprint-dark lang-java span10">
-[(3: Mars Alive), (1: Falling Star), (2: Blue Moon)]
+[(2: Blue Moon), (3: Mars Alive), (1: Falling Star)]
 [(1: Falling Star), (2: Blue Moon), (3: Mars Alive)]
+
 </pre>
             <p>Notice that while the result contents are equivalent between GORM and HQL, the format is
             different. The <code>works</code> property of the Artist will return a <code>java.util.Set</code>
-            by default, and the HQL version returns a <code>java.util.List</code>.</p>
+            by default, and the GORM <code>where</code> query returns a <code>java.util.List</code>.</p>
+            <p>The advantage to the <code>where</code> query is we could sort the results, whereas to sort
+            the results of the <code>works</code> property, we would need to tweak the Works class to implement
+            the <code>Comparable</code> interface.</p>
+
            </div>
         </div>
 
@@ -465,10 +547,12 @@ println results
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def results = Artist.findAll(sort: 'name') {
+// GORM Where
+def query = Artist.where {
  works.size() >= 5
 }
+
+def results = query.list(sort: 'name')
 println results
 
 //HQL
@@ -479,6 +563,13 @@ println results
 [(8: Leslie Derby), (10: Lucy Peters), (6: Richard Corsin), (4: Todd Dander)]
 [(8: Leslie Derby), (10: Lucy Peters), (6: Richard Corsin), (4: Todd Dander)]
 </pre>
+            <p>The <code>where</code> query demonstrations some of the operations available when building
+            the query. In this case, we compare the size of the associated collection. You can check out the
+            <a href="http://grails.org/doc/latest/guide/GORM.html#whereQueries" target="_blank">where query section</a>
+            of the Grails documentation to see all the options available when querying
+            against associations.</p>
+
+
             </div>
         </div>
 
@@ -487,37 +578,34 @@ println results
                 <h3>Find the Oldest Artist</h3>
 
                 <p>GORM has multiple ways to get the result of this query. First, I'll demonstrate the
-                   convoluted way.
+                   GORM <code>where</code> query. Note the use of the <code>&lt;=</code> operator instead
+                   of a <code>==</code> comparison. Grails does like the use of straight equality
+                   check against a date in this case.
                 </p>
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def c = Artist.createCriteria()
-
-def results = c.get {
-   eq "birthDate", { projections { min "birthDate" } }
+// GORM Where
+def criteria = Artist.where {
+    birthDate <= min(birthDate)
 }
 
+def results = criteria.find()
 println results
+
 </pre>
 <pre class="prettyprint-dark lang-java span10">
 (4: Todd Dander)
 </pre>
-            <p>In this example, I use the Criteria Builder to create a query which matches
-            the birthDate to the min birthDate from a sub-query. The <code>get</code> method
-            of Criteria Builder returns a single instance. I could also use the <code>list</code>
-            method, which would return a <code>java.util.List</code> of results. In this case,
-            it would be a list with one element.</p>
-            <p>This works, but it's not the friendliest way to get the desired result.
-            Here's a cleaner version, including HQL.
+            <p>Since I'm only expecting a single result, I can use the <code>find()</code> method instead
+                of <code>list()</code> on the query.
             </p>
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
+// GORM "cheat"
 def results = Artist.findAll(max: 1, sort: 'birthDate')
 println results
 
@@ -541,55 +629,28 @@ println results
         <div class="span12 offset2">
             <h3>Find the most expensive Work for a Style</h3>
 
-            <p>Queries the Work, but must join to the Artist to get the style.
+            <p>Queries the Work, but must join to the Artist to get the style. The easiest way to do this is via
+               a GORM <code>where</code> query and pass in the sort options to get the desired result. Since we
+                are setting the <code>max</code> paramter to 1, we can use <code>find()</code> instead of <code>list()</code>.
             </p>
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def results = Work.findAll(max: 1, sort: 'price', order: 'desc') {
-   artist.style == 'Modern'
-}
-println results
 
-// HQL
-results = Artist.executeQuery('from Work as w where w.artist.style = :style order by price desc',
-    [style: 'Modern'],[max: 1])
-println results
+def styleCriteria = 'Modern'
+
+def query = Work.where {
+    artist.style == styleCriteria
+}
+
+def result = query.find(max: 1, sort: 'price', order: 'desc')
+println result
 </pre>
 <pre class="prettyprint-dark lang-java span10">
-[(18: Diamond Storm)]
-[(18: Diamond Storm)]
+(18: Diamond Storm)
 </pre>
-           <p>Notice I'm using a String literal in the GORM version of the query. It is possible
-              to use a variable, but there is a catch. Below is an example of what you expect works 
-              (but doesn't) and what will work.
-           </p>
-<pre class="prettyprint lang-java span10">
-import gorm.recipes.*
-new BootStrap().init()
 
-def style = 'Modern'
-
-// WON'T WORK
-def results = Work.findAll(max: 1, sort: 'price', order: 'desc') {
-   artist.style == style
-}
-
-// WORKS
-def results = Work.findAll(max: 1, sort: 'price', order: 'desc') {
-   artist.style == "$style"
-}
-
-println results
-</pre>
-<pre class="prettyprint-dark lang-java span10">
-[(18: Diamond Storm)]
-</pre>                
-            <p>The first attempt will actually throw an <code>org.hibernate.QueryException</code>, so
-            you'll need to comment it out to try the second one. Using a GString for the
-            parameter substitution will work.</p>
             </div>
         </div>
 
@@ -597,40 +658,32 @@ println results
         <div class="span12 offset2">
             <h3>Find the Average Price of a Work for a Style</h3>
 
-            <p>The GORM version requires using the Criteria Builder API again, as we need
-               to use projections for the aggregate function. We also need to use the <code>createAlias()</code>
-               function to get access to the properties of the Artist object from the Work.
+            <p>By using a projection, we can make use of a GORM <code>where</code> query to get the desired
+               result. Since we are expecting a single value back from the query, we can use <code>find()</code>
+               with the query instead of <code>list()</code>.
             </p>
 <pre class="prettyprint lang-java span10">
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def c = Work.createCriteria()
-def results = c.get {
+def styleCriteria = 'Modern'
 
-    createAlias('artist','artistAlias')
-    eq('artistAlias.style', 'Modern')
-
-    projections {
-        avg('price')
-    }
+// GORM Where
+def query = Work.where {
+    artist.style == styleCriteria
+}.projections {
+    avg('price')
 }
-println results
 
-// HQL
-results = Work.executeQuery('select avg(price) from Work where artist.style = :style',
-    [style: 'Modern'])
+def results = query.find() as Integer
 println results
 </pre>
 <pre class="prettyprint-dark lang-java span10">
-1034.6666666666667
-[1034.6666666666667]
+1034
 </pre>
-            <p>The results from the GORM query is a <code>java.lang.Double</code> value and the
-            HQL version returned a <code>java.util.List</code> with the Double value as a single
-            member. GORM did this because we used the <code>get</code> method with the criteria. If
-            we used <code>list</code> instead, the result would be the same as the HQL query.</p>
+            <p>The results from the GORM <code>where</code> query is a <code>java.lang.Double</code>
+            value. We can use the <code>as Integer</code> suffix to cast it back to an Integer value, as
+            seen here on the call to the <code>find()</code> method.</p>
         </div>
     </div>
     <div class="row">
@@ -645,24 +698,30 @@ println results
 import gorm.recipes.*
 new BootStrap().init()
 
-// GORM
-def results = Work.findAllByTitleIlike('%moon%')
+def titleCriteria = '%moon%'
+
+// GORM Dynamic Finder
+def results = Work.findAllByTitleIlike(titleCriteria)
 println results
 
-// HQL
-results = Work.executeQuery('from Work where lower(title) like lower(:title)', [title: '%moon%'])
+// GORM Where
+def query = Work.where {
+    title =~ titleCriteria
+}
+
+results = query.list()
 println results
 </pre>
 <pre class="prettyprint-dark lang-java span10">
 [(2: Blue Moon), (22: Moon Nuts), (28: Watching the Moon), (29: Moonrise Over Shame), (39: Spin the Moon)]
 [(2: Blue Moon), (22: Moon Nuts), (28: Watching the Moon), (29: Moonrise Over Shame), (39: Spin the Moon)]
 </pre>
-            <p>GORM's dynamic finders directly support the LIKE operation. In this case, we use <code>Ilike</code>
+            <p>GORM's dynamic finders directly support the LIKE operation as one of the keywords it will
+                parse from the query. In this case, we use <code>Ilike</code>
             to specify we want a case-insensitive search. The criteria uses the standard SQL percent character
             wildcard.</p>
-            <p>For the HQL version, there isn't a way of specifying a case-insensitive search with the
-            executeQuery syntax, so I'm using the <code>lower()</code> function in HQL to convert both
-            the criteria and the column value to lowercase for the comparison.</p>
+            <p>For the GORM <code>where</code> we make use of the case-insensitive like comparision operation,
+            <code>=~</code> using the same criteria for the dynamic finder.</p>
         </div>
     </div>
 
@@ -683,8 +742,8 @@ println results
             <p>Grails 2.0 with GORM can be extremely powerful and extremely frustrating, especially for someone with a
             SQL background. Like all good things in Java, there are always multiple ways to get a job
             done. With the simple things in GORM, the dynamic finders offer a concise, easy-to-use way of executing
-            common queries. But as soon as things get more complicated, I found it is often easier to drop down and
-            use the HQL syntax. This is especially true for aggregate functions.</p>
+            common queries. Beyond the simple things, the GORM <code>where</code> queries offer an extremely power
+            query syntax for handling the types of queries I would have been inclined to use SQL for instead.</p>
             <p>If you want to see what's going with the queries, you can easily turn on the SQL tracing. Edit the
             development database properties in <code>DataSource.groovy</code> and change <code>logSql</code> and
             <code>formatSql</code> to true. You'll now see the generated SQL dumped to the Grails console output.</p>
@@ -701,6 +760,8 @@ println results
             <p>If you are a Grails / GORM Jedi, and have some cleaner tips for solving some of these queries, you can
             contact me via my <a href="http://www.sporcic.org/2012/01/gorm-recipes/">associated blog post</a>. This post can also be used to convey any other constructive feedback 
             or questions.</p>
+            <p><g:plusone annotation="inline"></g:plusone> </p>
+
           
         </div>
     </div>
@@ -723,9 +784,38 @@ println results
 </footer>
 
 
-  <script src="js/jquery-1.7.1.min.js"></script>
-  <script src="js/bootstrap.min.js"></script>
-  <script src="js/prettify.min.js"></script>
-  <script>$(function () { prettyPrint() })</script>
+<script src="js/jquery-1.7.1.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/prettify.min.js"></script>
+<script>$(function () { prettyPrint() })</script>
+<script type="text/javascript">
+
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-32212817-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function () {
+        var ga = document.createElement('script');
+        ga.type = 'text/javascript';
+        ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0];
+        s.parentNode.insertBefore(ga, s);
+    })();
+
+</script>
+<script type="text/javascript">
+    (function () {
+        var po = document.createElement('script');
+        po.type = 'text/javascript';
+        po.async = true;
+        po.src = 'https://apis.google.com/js/plusone.js';
+        var s = document.getElementsByTagName('script')[0];
+        s.parentNode.insertBefore(po, s);
+    })();
+</script>
+
+
+
 </body>
 </html>
