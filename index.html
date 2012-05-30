@@ -590,11 +590,11 @@ import gorm.recipes.*
 new BootStrap().init()
 
 // GORM Where
-def criteria = Artist.where {
+def query = Artist.where {
     birthDate <= min(birthDate)
 }
 
-def results = criteria.find()
+def results = query.find()
 println results
 
 </pre>
